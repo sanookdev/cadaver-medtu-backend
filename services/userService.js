@@ -139,7 +139,7 @@ module.exports = {
             );
 
             const token = jwt.sign(rows[0], jwt_access_key, {
-              expiresIn: "1d",
+              expiresIn: "6h",
             });
 
             const result = {
@@ -353,7 +353,7 @@ module.exports = {
       let sql = `UPDATE ${table} SET ${updates.join(", ")} WHERE id = ?`;
       connection.query(sql, values, (error, result) => {
         if (error) return resolve({ status: false, message: error });
-        resolve({ status: true, message: "Data has been updated." });
+        resolve({ status: true, message: "Updated success" });
       });
     });
   },
