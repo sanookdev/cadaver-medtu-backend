@@ -1,8 +1,73 @@
 const express = require("express");
 const router = express.Router();
+const connection = require("../config/database");
+const fs = require("fs");
+const multer = require("multer");
+const path = require("path");
+
 const service = require("../services/bodyService");
 const { verifyToken, isInRole } = require("../config/security");
 const { check, validationResult } = require("express-validator");
+
+// Define the uploads directory path
+const uploadsDir = path.join(__dirname, "../uploads");
+
+// Check if the uploads directory exists, if not, create it
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+router.use("/uploads", express.static(uploadsDir));
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // ตั้งชื่อไฟล์ด้วย timestamp
+  },
+});
+
+const upload = multer({ storage: storage });
+
+router.post(
+  "/bodyparts",
+  [
+    check("name_th").notEmpty().withMessage("This field is required!"),
+    check("name_en").notEmpty().withMessage("This field is required!"),
+  ],
+  verifyToken,
+  isInRole(["admin"]),
+  upload.single("imageUrl"),
+  async (req, res) => {
+    const checkErr = await validationResult(req);
+    if (!checkErr.isEmpty()) {
+      return res.json({ status: false, errors: checkErr.errors });
+    }
+    const { name_th, name_en, price, quantity, about, created_by, status } =
+      req.body;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const values = [
+      name_th,
+      name_en,
+      price,
+      quantity,
+      about,
+      created_by || "system",
+      imageUrl,
+      status || "public",
+    ];
+    const result = await service.onAdd(values);
+    return res.json({
+      data: {
+        ...result,
+        imageUrl: req.file
+          ? `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`
+          : null,
+      },
+    });
+  }
+);
 
 // FIND ALL
 router.get("/", verifyToken, async (req, res) => {
@@ -39,6 +104,7 @@ router.get("/search", verifyToken, async (req, res) => {
   const result = await service.findByConditions(conditions, values);
   return res.json(result);
 });
+
 // STORE
 router.post(
   "/store",

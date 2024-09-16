@@ -13,6 +13,29 @@ const password_sender = "mevbkpwoxzynorqc";
 const app_url = process.env.APPLICATION_URL;
 
 module.exports = {
+  onAdd(values) {
+    return new Promise((resolve, reject) => {
+      let sql = `
+      INSERT INTO ${table} (name_th, name_en, price, quantity, about, created_by, created_date, imageUrl, status)
+      VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)`;
+      connection.query(sql, values, (err, results) => {
+        if (err) {
+          console.error(err);
+
+          return resolve({
+            status: false,
+            message: "Database error",
+            error: err,
+          });
+        }
+        resolve({
+          message: "Body part created successfully",
+          id: results.insertId,
+          status: true,
+        });
+      });
+    });
+  },
   findAll() {
     return new Promise((resolve, reject) => {
       let sql = `SELECT * FROM ${table}`;
