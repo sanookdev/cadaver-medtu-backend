@@ -9,6 +9,7 @@ const isProduction = process.env.ENV === "PRODUCTION";
 server.use(cors());
 
 server.use(express.json());
+server.use(express.urlencoded({ extended: true }));
 
 server.use("/api", require("./routes"));
 

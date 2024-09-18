@@ -36,9 +36,67 @@ module.exports = {
       });
     });
   },
-  findAll() {
+  getBodyPartById(id) {
     return new Promise((resolve, reject) => {
-      let sql = `SELECT * FROM ${table}`;
+      let sql = `SELECT * FROM ${table} WHERE id = ?`;
+      connection.query(sql, [id], (err, results) => {
+        if (err) {
+          console.error(err);
+          return reject(err);
+        }
+        if (results.length === 0) {
+          return resolve(null);
+        }
+        resolve(results[0]); // ดึงข้อมูล row แรกที่เจอ
+      });
+    });
+  },
+  onUpdate(values) {
+    return new Promise((resolve, reject) => {
+      let sql = `
+        UPDATE ${table}
+        SET name_th = ?, name_en = ?, price = ?, quantity = ?, about = ?, 
+        imageUrl = ?, status = ?, updated_date = NOW(),updated_by = ? 
+        WHERE id = ?`;
+
+      connection.query(sql, values, (err, results) => {
+        if (err) {
+          console.error(err);
+          return resolve({
+            status: false,
+            message: "Database error",
+            error: err,
+          });
+        }
+        resolve({
+          message: "Body part updated successfully",
+          status: true,
+        });
+      });
+    });
+  },
+  onChangeStatus(productId, newStatus) {
+    return new Promise((resolve, reject) => {
+      let sql = `UPDATE ${table} SET status = ? WHERE id = ? `;
+      connection.query(sql, [newStatus, productId], (err, results) => {
+        if (err) {
+          console.error(err);
+          return resolve({
+            status: false,
+            message: "Database error",
+            error: err,
+          });
+        }
+        resolve({
+          message: "Status updated successfully",
+          status: true,
+        });
+      });
+    });
+  },
+  findAll(conditions) {
+    return new Promise((resolve, reject) => {
+      let sql = `SELECT * FROM ${table} ${conditions}`;
 
       connection.query(sql, (error, rows) => {
         if (error) return resolve({ status: false, message: error.message });
@@ -84,23 +142,23 @@ module.exports = {
       });
     });
   },
-  onUpdate(updates, values) {
-    return new Promise((resolve, reject) => {
-      let sql = `UPDATE ${table} SET ${updates.join(
-        ", "
-      )}, updated_date = ?, updated_by = ? WHERE id = ?`;
+  // onUpdate(updates, values) {
+  //   return new Promise((resolve, reject) => {
+  //     let sql = `UPDATE ${table} SET ${updates.join(
+  //       ", "
+  //     )}, updated_date = ?, updated_by = ? WHERE id = ?`;
 
-      connection.query(sql, values, (error, result) => {
-        if (error) return resolve({ status: false, message: error.message });
-        if (result.affectedRows === 0)
-          return resolve({
-            status: false,
-            message: "ไม่พบข้อมูล body part ที่ต้องการอัพเดต",
-          });
-        resolve({ status: true, message: "อัพเดตข้อมูล body part สำเร็จ" });
-      });
-    });
-  },
+  //     connection.query(sql, values, (error, result) => {
+  //       if (error) return resolve({ status: false, message: error.message });
+  //       if (result.affectedRows === 0)
+  //         return resolve({
+  //           status: false,
+  //           message: "ไม่พบข้อมูล body part ที่ต้องการอัพเดต",
+  //         });
+  //       resolve({ status: true, message: "อัพเดตข้อมูล body part สำเร็จ" });
+  //     });
+  //   });
+  // },
   onDelete(id) {
     return new Promise((resolve, reject) => {
       let sqlCheck = `SELECT * FROM ${table} WHERE id = ?`;

@@ -85,6 +85,17 @@ router.get("/verify-email/:token", async (req, res) => {
   const result = await service.onVerificationEmail(token);
   return res.json(result);
 });
+router.get("/checkTokenResetPassword/:token", async (req, res) => {
+  const { token } = req.params;
+
+  if (!token) {
+    return res
+      .status(400)
+      .json({ status: false, message: "Token is required" });
+  }
+  const result = await service.onCheckTokenResetPassword(token);
+  return res.json(result);
+});
 
 // LOGIN ROUTE
 router.post(

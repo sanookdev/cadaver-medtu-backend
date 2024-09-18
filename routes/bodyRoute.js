@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const connection = require("../config/database");
 const fs = require("fs");
 const multer = require("multer");
 const path = require("path");
@@ -30,16 +29,101 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-router.post(
-  "/bodyparts",
-  [
-    check("name_th").notEmpty().withMessage("This field is required!"),
-    check("name_en").notEmpty().withMessage("This field is required!"),
-  ],
+router.put(
+  "/bodyparts/:id", // ใช้ parameter :id เพื่อระบุรายการที่ต้องการอัปเดต
   verifyToken,
   isInRole(["admin"]),
   upload.single("imageUrl"),
   async (req, res) => {
+    const checkErr = await validationResult(req);
+    if (!checkErr.isEmpty()) {
+      return res.json({ status: false, errors: checkErr.errors });
+    }
+
+    const { name_th, name_en, price, quantity, about, status, updated_date } =
+      req.body;
+    const id = req.params.id; // รับ id จาก route
+
+    try {
+      // ดึงข้อมูลปัจจุบันของ body part ตาม id
+      const existingItem = await service.getBodyPartById(id);
+      if (!existingItem) {
+        return res.json({ status: false, message: "Body part not found" });
+      }
+
+      // เช็คว่ามีไฟล์รูปภาพอยู่แล้วหรือไม่
+      const oldImageUrl = existingItem.imageUrl;
+
+      // อัปโหลดไฟล์ใหม่
+      let imageUrl = oldImageUrl; // ใช้ไฟล์เดิมก่อนถ้ายังไม่มีไฟล์ใหม่
+
+      if (req.file) {
+        // ถ้ามีการอัปโหลดไฟล์ใหม่ ให้ลบไฟล์เก่าก่อน
+        if (oldImageUrl) {
+          const oldImagePath = path.join(
+            __dirname,
+            "uploads",
+            path.basename(oldImageUrl)
+          );
+
+          // ตรวจสอบว่าไฟล์เก่ายังอยู่ในเซิร์ฟเวอร์หรือไม่
+          if (fs.existsSync(oldImagePath)) {
+            fs.unlink(oldImagePath, (err) => {
+              if (err) {
+                console.error("Error removing old image: ", err);
+              } else {
+                console.log("Old image removed: ", oldImagePath);
+              }
+            });
+          } else {
+            console.log(
+              "Old image does not exist on the server: ",
+              oldImagePath
+            );
+          }
+        }
+
+        // ตั้งค่าชื่อไฟล์ใหม่
+        imageUrl = `/uploads/${req.file.filename}`;
+      }
+
+      const values = [
+        name_th,
+        name_en,
+        price,
+        quantity,
+        about,
+        imageUrl,
+        status || "public",
+        req.user.username,
+        id,
+      ];
+      const result = await service.onUpdate(values);
+
+      return res.json({
+        data: {
+          ...result,
+          imageUrl: imageUrl
+            ? `${req.protocol}://${req.get("host")}${imageUrl}`
+            : null,
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      return res.json({ status: false, message: "Server error" });
+    }
+  }
+);
+
+// STORE NEW BODY
+router.post(
+  "/bodyparts",
+  verifyToken,
+  isInRole(["admin"]),
+  upload.single("imageUrl"),
+
+  async (req, res) => {
+    // console.log(req.body.name_th);
     const checkErr = await validationResult(req);
     if (!checkErr.isEmpty()) {
       return res.json({ status: false, errors: checkErr.errors });
@@ -70,8 +154,10 @@ router.post(
 );
 
 // FIND ALL
-router.get("/", verifyToken, async (req, res) => {
-  const result = await service.findAll();
+router.get("/", verifyToken, isInRole(["admin", "user"]), async (req, res) => {
+  const result = await service.findAll(
+    req.user.role === "admin" ? "" : 'WHERE status = "public"'
+  );
   return res.json(result);
 });
 
@@ -174,4 +260,31 @@ router.delete("/:id", verifyToken, isInRole(["admin"]), async (req, res) => {
   const result = await service.onDelete(id);
   res.json(result);
 });
+
+router.put(
+  "/status/:id",
+  [check("status").notEmpty().withMessage("New status is required!")],
+  verifyToken,
+  isInRole(["admin"]),
+  async (req, res) => {
+    const checkErr = await validationResult(req);
+    if (!checkErr.isEmpty()) {
+      return res.json({ status: false, errors: checkErr.errors });
+    }
+    const productId = req.params.id;
+    const { status } = req.body;
+
+    // ตรวจสอบข้อมูลที่จำเป็น
+    if (!status) {
+      return res.status(400).json({
+        status: false,
+        message: "กรุณาระบุสถานะที่ต้องการอัพเดต",
+      });
+    }
+
+    const result = await service.onChangeStatus(productId, status);
+
+    return res.json(result);
+  }
+);
 module.exports = router;

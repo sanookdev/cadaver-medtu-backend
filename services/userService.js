@@ -77,32 +77,6 @@ module.exports = {
       );
     });
   },
-
-  // onRegister(user) {
-  //   return new Promise((resolve, reject) => {
-  //     let sqlCheckRow = `SELECT * FROM ${table} WHERE username = ? OR email = ?`;
-  //     connection.query(
-  //       sqlCheckRow,
-  //       [user.username, user.email],
-  //       (error, row) => {
-  //         if (error) return resolve({ status: false, message: error });
-  //         if (row.length > 0)
-  //           return resolve({
-  //             status: false,
-  //             message: `Username or Email already exit!`,
-  //           });
-  //         let sql = `INSERT INTO ${table} SET ?`;
-  //         connection.query(sql, [user], (error, rows) => {
-  //           if (error) return resolve({ status: false, message: error });
-  //           resolve({
-  //             status: true,
-  //             message: `${user.username} has been created.`,
-  //           });
-  //         });
-  //       }
-  //     );
-  //   });
-  // },
   onLogin(user) {
     return new Promise((resolve, reject) => {
       let sql = `SELECT * FROM ${table} WHERE (username = ? or email = ?) and status != 'inactive'`;
@@ -348,6 +322,21 @@ module.exports = {
       });
     });
   },
+  onCheckTokenResetPassword(token) {
+    return new Promise((resolve, reject) => {
+      let sql = `SELECT id, username, email FROM ${table} WHERE reset_password_token = ? AND reset_password_expires > ?`;
+      connection.query(sql, [token, Date.now()], (error, rows) => {
+        if (error) return resolve({ status: false, message: error });
+        if (!rows.length)
+          return resolve({
+            status: false,
+            message: "Token is invalid or expired!",
+          });
+        resolve({ status: true, message: "success", users: rows });
+      });
+    });
+  },
+
   onUpdate(updates, values) {
     return new Promise((resolve, reject) => {
       let sql = `UPDATE ${table} SET ${updates.join(", ")} WHERE id = ?`;
