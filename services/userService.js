@@ -167,11 +167,14 @@ module.exports = {
       });
     });
   },
-  findByConditions(conditions, values) {
+  findByConditions(conditions, values, sort = null) {
     return new Promise((resolve, reject) => {
-      let sql = `SELECT id,firstname,lastname,email,username,created_by,created_date,role,status FROM ${table}`;
+      let sql = `SELECT * FROM ${table}`;
       if (conditions.length > 0) {
         sql += " WHERE " + conditions.join(" AND ");
+      }
+      if (sort !== null) {
+        sql += ` ORDER BY updatedAt ${sort}`;
       }
 
       connection.query(sql, values, (error, rows) => {

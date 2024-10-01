@@ -15,6 +15,7 @@ router.post(
   [
     check("name").notEmpty().withMessage("Name is required!"),
     check("remark").notEmpty().withMessage("Remark is required!"),
+    check("status").notEmpty().withMessage("Status is required!"),
   ],
   verifyToken,
   isInRole(["admin"]),
@@ -23,10 +24,28 @@ router.post(
     if (!checkErr.isEmpty()) {
       return res.json({ status: false, errors: checkErr.errors });
     }
-    const { name, remark } = req.body;
-    const values = [name, remark];
+    const { name, remark, status } = req.body;
+    const values = [name, remark, status, req.user.username];
     const result = await service.onStore(values);
     return res.json(result);
+  }
+);
+
+router.post(
+  "/checkDateIsNotEmpty",
+  [
+    check("zone_id").notEmpty().withMessage("This field is required!"),
+    check("order_id").notEmpty().withMessage("This field is required!"),
+    check("project_start_date")
+      .notEmpty()
+      .withMessage("This field is required!"),
+  ],
+  (req, res) => {
+    const checkErr = validationResult(req);
+    if (!checkErr) {
+      return res.json({ status: false, error: checkErr.errors });
+    }
+    const { zone_id, order_id, project_start_date } = req.body;
   }
 );
 

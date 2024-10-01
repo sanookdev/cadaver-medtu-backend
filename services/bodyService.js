@@ -106,11 +106,14 @@ module.exports = {
       });
     });
   },
-  findByConditions(conditions, values) {
+  findByConditions(conditions, values, sort = null) {
     return new Promise((resolve, reject) => {
       let sql = `SELECT * FROM ${table}`;
       if (conditions.length > 0) {
         sql += " WHERE " + conditions.join(" AND ");
+      }
+      if (sort !== null) {
+        sql += ` ORDER BY updated_date ${sort}`;
       }
 
       // console.log(conditions);
@@ -123,7 +126,7 @@ module.exports = {
           status: true,
           message: "success",
           rows: rows.length,
-          users: rows,
+          datas: rows,
         });
       });
     });

@@ -1,10 +1,57 @@
 const connection = require("../config/database");
 const date = require("date-and-time");
-const table = "tb_zone";
+const table = "tb_orders";
+const table_order_zone = "tb_order_zone";
+const table_order_product = "tb_order_product";
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 module.exports = {
+  onCheckZoneOnDate(zone_id, date) {
+    return new Promise((resolve, reject) => {
+      let sql = `SELECT COUNT(*) AS 'isEmpty'
+      FROM ${table} o
+      JOIN ${table_order_zone} oz ON o.id = oz.order_id
+      WHERE oz.zone_id = ?
+      AND DATE(o.project_start_date) = ?;`;
+      connection.query(sql, [zone_id, date], (err, results) => {
+        if (err) {
+          return resolve({
+            status: false,
+            message: "Database error",
+            error: err,
+          });
+        }
+        resolve({
+          isEmpty: results[0].isEmpty === 0 ? true : false,
+          status: true,
+        });
+      });
+    });
+  },
+  onCheckZoneByDate(date) {
+    return new Promise((resolve, reject) => {
+      let sql = `SELECT z.*
+      FROM tb_zone z
+      LEFT JOIN tb_order_zone oz ON z.id = oz.zone_id 
+          AND DATE(oz.project_start_date) = ?
+      WHERE oz.zone_id IS NULL;`;
+      connection.query(sql, [date], (err, results) => {
+        if (err) {
+          return resolve({
+            status: false,
+            message: "Database error",
+            error: err,
+          });
+        }
+        resolve({
+          rows: results.length,
+          status: true,
+          zones: results,
+        });
+      });
+    });
+  },
   onStore(zone) {
     return new Promise((resolve, reject) => {
       let sql = `

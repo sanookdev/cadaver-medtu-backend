@@ -19,16 +19,22 @@ router.get("/", verifyToken, isInRole(["admin"]), async (req, res) => {
 
 // FIND USER BY CONDITION
 router.get("/search", verifyToken, isInRole(["admin"]), async (req, res) => {
-  const { id, username, email, firstname, lastname, role } = req.query;
+  const { id, username, firstname, lastname, email, name, role, status, sort } =
+    req.query;
   let conditions = [];
   let values = [];
   if (id) {
     conditions.push("id = ?");
     values.push(id);
   }
-  if (username) {
-    conditions.push("username LIKE ?");
-    values.push(`%${username}%`);
+  if (name) {
+    conditions.push(
+      "(username LIKE ? OR firstname LIKE ? OR lastname LIKE ? or email LIKE ?)"
+    );
+    values.push(`%${name}%`);
+    values.push(`%${name}%`);
+    values.push(`%${name}%`);
+    values.push(`%${name}%`);
   }
   if (email) {
     conditions.push("email LIKE ?");
@@ -38,16 +44,16 @@ router.get("/search", verifyToken, isInRole(["admin"]), async (req, res) => {
     conditions.push("firstname LIKE ?");
     values.push(`%${firstname}%`);
   }
-  if (lastname) {
-    conditions.push("lastname LIKE ?");
-    values.push(`%${lastname}%`);
-  }
   if (role) {
     conditions.push("role = ?");
     values.push(role);
   }
+  if (status) {
+    conditions.push("status = ?");
+    values.push(status);
+  }
 
-  const result = await service.findByConditions(conditions, values);
+  const result = await service.findByConditions(conditions, values, sort);
   return res.json(result);
 });
 

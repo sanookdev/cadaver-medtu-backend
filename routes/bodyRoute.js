@@ -163,7 +163,8 @@ router.get("/", verifyToken, isInRole(["admin", "user"]), async (req, res) => {
 
 // SEARCH
 router.get("/search", verifyToken, async (req, res) => {
-  const { id, name_th, name_en, price, amount } = req.body;
+  const { id, name_th, price, quantity, status, sort } = req.query;
+
   let conditions = [];
   let values = [];
   if (id) {
@@ -171,23 +172,24 @@ router.get("/search", verifyToken, async (req, res) => {
     values.push(id);
   }
   if (name_th) {
-    conditions.push("name_th LIKE ?");
+    conditions.push("(name_th LIKE ? OR name_en LIKE ?)");
     values.push(`%${name_th}%`);
-  }
-  if (name_en) {
-    conditions.push("name_en LIKE ?");
-    values.push(`%${name_en}%`);
+    values.push(`%${name_th}%`);
   }
   if (price) {
     conditions.push("price LIKE ?");
     values.push(`%${price}%`);
   }
-  if (amount) {
-    conditions.push("amount LIKE ?");
-    values.push(`%${amount}%`);
+  if (quantity) {
+    conditions.push("quantity LIKE ?");
+    values.push(`%${quantity}%`);
+  }
+  if (status) {
+    conditions.push("status LIKE ?");
+    values.push(`%${status}%`);
   }
 
-  const result = await service.findByConditions(conditions, values);
+  const result = await service.findByConditions(conditions, values, sort);
   return res.json(result);
 });
 
@@ -198,7 +200,7 @@ router.post(
     check("name_th").notEmpty().withMessage("Name th is required!"),
     check("name_en").notEmpty().withMessage("Name en is required!"),
     check("price").notEmpty().withMessage("price is required!"),
-    check("amount").notEmpty().withMessage("amount is required!"),
+    check("quantity").notEmpty().withMessage("quantity is required!"),
   ],
   verifyToken,
   isInRole(["admin"]),
@@ -208,9 +210,9 @@ router.post(
       return res.json({ status: false, errors: checkErr.errors });
     }
 
-    const { name_th, name_en, price, amount } = req.body;
+    const { name_th, name_en, price, quantity } = req.body;
 
-    let values = [name_th, name_en, price, amount, req.user.username];
+    let values = [name_th, name_en, price, quantity, req.user.username];
 
     const result = await service.onStore(values);
 
@@ -220,10 +222,10 @@ router.post(
 // UPDATE
 router.put("/:id", verifyToken, isInRole(["admin"]), async (req, res) => {
   const { id } = req.params;
-  const { name_th, name_en, price, amount } = req.body;
+  const { name_th, name_en, price, quantity } = req.body;
 
   // ตรวจสอบข้อมูลที่จำเป็น
-  if (!name_th && !name_en && price === undefined && amount === undefined) {
+  if (!name_th && !name_en && price === undefined && quantity === undefined) {
     return res.status(400).json({
       status: false,
       message: "กรุณาระบุข้อมูลที่ต้องการอัพเดตอย่างน้อยหนึ่งรายการ",
@@ -244,9 +246,9 @@ router.put("/:id", verifyToken, isInRole(["admin"]), async (req, res) => {
     updates.push("price = ?");
     values.push(price);
   }
-  if (amount !== undefined) {
-    updates.push("amount = ?");
-    values.push(amount);
+  if (quantity !== undefined) {
+    updates.push("quantity = ?");
+    values.push(quantity);
   }
   values.push(new Date(), req.user.username, id); // เพิ่ม updated_date และ updated_by
 
