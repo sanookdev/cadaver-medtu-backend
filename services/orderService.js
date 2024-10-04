@@ -1,6 +1,7 @@
 const connection = require("../config/database");
 const date = require("date-and-time");
 const table = "tb_orders";
+const table_zone = "tb_zone";
 const table_order_zone = "tb_order_zone";
 const table_order_product = "tb_order_product";
 const jwt = require("jsonwebtoken");
@@ -48,6 +49,30 @@ module.exports = {
           rows: results.length,
           status: true,
           zones: results,
+        });
+      });
+    });
+  },
+  getZoneReserved() {
+    return new Promise((resolve, reject) => {
+      let sql = `
+      SELECT orders.* ,or_zone.*,zone.name 
+      FROM tb_orders AS orders
+      LEFT JOIN tb_order_zone or_zone ON orders.id = or_zone.order_id 
+      LEFT JOIN tb_zone zone ON zone.id = or_zone.zone_id ORDER BY zone.name DESC
+      `;
+      // let sql = `SELECT or_zone.order_id ,or_zone.zone_id,or_zone.created_date,or_zone.project_start_date ,zone.name
+      // FROM ${table_order_zone} or_zone
+      // JOIN ${table_zone} zone ON zone.id = or_zone.zone_id ORDER BY zone.name DESC`;
+      connection.execute(sql, (error, rows) => {
+        if (error) return resolve({ status: false, message: error });
+        if (!rows.length)
+          return resolve({ status: false, message: "Reservation was empty." });
+        resolve({
+          status: true,
+          message: "success",
+          rows: rows.length,
+          zone_books: rows,
         });
       });
     });

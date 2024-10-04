@@ -5,7 +5,11 @@ const { verifyToken, isInRole, password_hash } = require("../config/security");
 const { check, validationResult } = require("express-validator");
 
 router.get("/auth", verifyToken, async (req, res) => {
-  return res.json({ status: true, user: req.user });
+  return res.json({
+    status: true,
+    user: req.user,
+    newToken: req.newToken ? req.newToken : null,
+  });
 });
 
 router.get("/authAdmin", verifyToken, isInRole(["admin"]), async (req, res) => {

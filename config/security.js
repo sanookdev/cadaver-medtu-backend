@@ -28,8 +28,16 @@ const security = {
       if (err) {
         return res.status(500).json({ status: false, message: err.message });
       }
-
       req.user = decoded;
+
+      delete decoded.exp;
+      delete decoded.iat;
+      // console.log(decoded);
+
+      const newToken = jwt.sign(decoded, jwt_access_key, {
+        expiresIn: "6h",
+      });
+      req.newToken = newToken;
       next();
     });
   },

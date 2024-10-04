@@ -87,5 +87,9 @@ router.post(
 router.get("/", async (req, res) => {
   res.json("Order index route");
 });
+router.get("/getZoneReserved", async (req, res) => {
+  const results = await service.getZoneReserved();
+  res.json(results);
+});
 
 module.exports = router;
