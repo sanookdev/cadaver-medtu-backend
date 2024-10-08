@@ -10,8 +10,6 @@ router.get("/", verifyToken, isInRole(["admin"]), async (req, res) => {
 router.post(
   "/store",
   verifyToken,
-  [check("order_no").notEmpty().withMessage("This field is required.")],
-  [check("order_no").notEmpty().withMessage("This field is required.")],
   [
     check("project_start_date")
       .notEmpty()
@@ -29,16 +27,27 @@ router.post(
       .withMessage("This field is required."),
   ],
   [
-    check("project_number_of_parrticipants")
+    check("project_number_of_participants")
       .notEmpty()
-      .withMessage("This field is required."),
+      .withMessage("This field is required.")
+      .isInt({ gt: 0 })
+      .withMessage("The number of participants must be greater than 0."),
   ],
   async (req, res) => {
     const checkErr = await validationResult(req);
     if (!checkErr.isEmpty()) {
       return res.json({ status: false, errors: checkErr.errors });
     }
-    res.json(req.body);
+
+    const orderNo = await service.createOrder();
+    const newOrder = { ...req.body, order_no: orderNo };
+    const zone_book = newOrder.zone_book;
+    delete newOrder.zone_book;
+    // console.log(newOrder);
+
+    // console.log(newOrder, zone_book);
+    const response = await service.onStore(newOrder, zone_book);
+    res.json(response);
   }
 );
 

@@ -5,6 +5,7 @@ const table_zone = "tb_zone";
 const table_order_zone = "tb_order_zone";
 const table_order_product = "tb_order_product";
 const jwt = require("jsonwebtoken");
+const { v4: uuidv4 } = require("uuid");
 require("dotenv").config();
 
 module.exports = {
@@ -77,28 +78,63 @@ module.exports = {
       });
     });
   },
-  onStore(zone) {
+  onStore(newOrder, zone_book) {
     return new Promise((resolve, reject) => {
       let sql = `
-      INSERT INTO ${table} (name,remark,status,created_at,updated_by)
-      VALUES (?, ?, ?, NOW(),?)`;
-      connection.query(sql, zone, (err, results) => {
+      INSERT INTO ${table} SET ?`;
+      connection.query(sql, [newOrder], (err, results) => {
         if (err) {
-          console.error(err);
-
           return resolve({
             status: false,
             message: "Database error",
             error: err,
           });
         }
-        resolve({
-          message: "Zone created successfully",
-          id: results.insertId,
-          status: true,
+        const orderId = results.insertId;
+        const insertOrderZoneQuery = `INSERT INTO ${table_order_zone} (order_id, zone_id, project_start_date) VALUES ?`;
+        const orderZoneValues = zone_book.map((zone_id) => [
+          orderId, // order_id ที่เพิ่ง insert
+          zone_id, // ชื่อ zone
+          newOrder.project_start_date, // จำนวนที่จองใน zone
+        ]);
+        connection.query(insertOrderZoneQuery, [orderZoneValues], (error) => {
+          if (error) {
+            return resolve(error);
+          }
+          // res.json({ message: 'Order and zone_book inserted successfully' });
+          resolve({
+            message: "Order created successfully",
+            id: results.insertId,
+            status: true,
+          });
         });
+
+        // resolve({
+        //   message: "Order created successfully",
+        //   id: results.insertId,
+        //   status: true,
+        // });
       });
     });
+  },
+  onStoreOrderZone(zone_book) {},
+  isOrderNoUnique(orderNo) {
+    return new Promise((resolve, reject) => {
+      const query = `SELECT COUNT(*) AS count FROM ${table} WHERE order_no = ?`;
+      connection.query(query, [orderNo], (error, results) => {
+        if (error) {
+          return reject(error);
+        }
+        resolve(results[0].count === 0);
+      });
+    });
+  },
+  async createOrder() {
+    const orderNo = uuidv4().split("-")[0].toUpperCase();
+    while (!(await this.isOrderNoUnique(orderNo))) {
+      orderNo = uuidv4();
+    }
+    return orderNo;
   },
   onDelete(id) {
     return new Promise((resolve, reject) => {
