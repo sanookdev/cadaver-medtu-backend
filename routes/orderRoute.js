@@ -40,13 +40,29 @@ router.post(
     }
 
     const orderNo = await service.createOrder();
-    const newOrder = { ...req.body, order_no: orderNo };
+    const newOrder = {
+      ...req.body,
+      order_no: orderNo,
+      created_by: req.user.username,
+    };
     const zone_book = newOrder.zone_book;
+    const product_book = newOrder.product_book;
     delete newOrder.zone_book;
-    // console.log(newOrder);
+    delete newOrder.product_book;
 
-    // console.log(newOrder, zone_book);
-    const response = await service.onStore(newOrder, zone_book);
+    for (let zone_id of zone_book) {
+      let resCheck = await service.onCheckZoneOnDate(
+        zone_id,
+        newOrder.project_start_date
+      );
+      if (!resCheck.isEmpty) {
+        return res.json({
+          status: false,
+          message: "ZONE NOT EMPTY",
+        });
+      }
+    }
+    const response = await service.onStore(newOrder, product_book, zone_book);
     res.json(response);
   }
 );
